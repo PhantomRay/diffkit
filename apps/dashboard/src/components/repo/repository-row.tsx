@@ -7,16 +7,30 @@ import {
 import { Link } from "@tanstack/react-router";
 import {
 	Fragment,
+	lazy,
 	memo,
 	type ReactNode,
+	Suspense,
 	useEffect,
 	useRef,
 	useState,
 } from "react";
-import { RepoCommitSparkline } from "#/components/repo/repo-commit-sparkline";
 import { formatRelativeTime } from "#/lib/format-relative-time";
 import type { GitHubQueryScope } from "#/lib/github.query";
 import type { UserRepoSummary } from "#/lib/github.types";
+
+const RepoCommitSparkline = lazy(() =>
+	import("#/components/repo/repo-commit-sparkline").then((mod) => ({
+		default: mod.RepoCommitSparkline,
+	})),
+);
+
+const SparklinePlaceholder = (
+	<div
+		className="h-[52px] w-[168px] shrink-0 rounded-sm bg-muted/15"
+		aria-hidden
+	/>
+);
 
 const languageColors: Record<string, string> = {
 	Astro: "#ff5a03",
@@ -196,12 +210,11 @@ function LazyRepoCommitSparkline({
 	return (
 		<div ref={containerRef} className="flex items-start justify-end">
 			{showChart ? (
-				<RepoCommitSparkline scope={scope} owner={owner} repo={repo} />
+				<Suspense fallback={SparklinePlaceholder}>
+					<RepoCommitSparkline scope={scope} owner={owner} repo={repo} />
+				</Suspense>
 			) : (
-				<div
-					className="h-[52px] w-[168px] shrink-0 rounded-sm bg-muted/15"
-					aria-hidden
-				/>
+				SparklinePlaceholder
 			)}
 		</div>
 	);

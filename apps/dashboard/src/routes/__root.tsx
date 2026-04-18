@@ -15,11 +15,13 @@ import { ErrorScreen } from "#/components/layouts/error-screen";
 import { buildSeo, buildWebSiteSchema } from "#/lib/seo";
 import { siteConfig } from "#/lib/site-config";
 
-const Agentation = lazy(() =>
-	import("agentation").then((mod) => ({ default: mod.Agentation })),
-);
-
 import appCss from "../styles.css?url";
+
+const DevAgentation = import.meta.env.DEV
+	? lazy(() =>
+			import("agentation").then((mod) => ({ default: mod.Agentation })),
+		)
+	: null;
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient;
@@ -82,9 +84,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			</head>
 			<body className="min-h-screen bg-background font-sans antialiased">
 				{children}
-				{import.meta.env.DEV ? (
+				{DevAgentation ? (
 					<Suspense>
-						<Agentation />
+						<DevAgentation />
 					</Suspense>
 				) : null}
 				<TanStackDevtools
