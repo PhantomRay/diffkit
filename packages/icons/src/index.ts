@@ -32,6 +32,7 @@ export {
   Download02Icon as DownloadIcon,
   DragDropVerticalIcon as GripVerticalIcon,
   File02Icon as FileIcon,
+  FilterIcon,
   Folder01Icon as FolderIcon,
   FolderLibraryIcon,
   GitBranchIcon,
@@ -61,7 +62,7 @@ export {
   Settings01Icon as SettingsIcon,
   SidebarLeftIcon as PanelLeftIcon,
   SourceCodeIcon as CodeIcon,
-  StarIcon,
+  SquareLock02Icon,
   Sun01Icon as SunIcon,
   Tick02Icon as CheckIcon,
   Tick02Icon as TickIcon,
@@ -75,3 +76,4 @@ export { ArchiveDownIcon } from "./archive-down-icon";
 export { GitHubLogo, GitHubWordmarkLogo, XLogo } from "./brand-logos";
 export { PenIcon } from "./pen-icon";
 export { SeparatorHorizontalIcon } from "./separator-horizontal-icon";
+export { StarIcon } from "./star-icon";

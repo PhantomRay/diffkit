@@ -1,4 +1,5 @@
 import {
+	ArchiveIcon,
 	BugIcon,
 	ExternalLinkIcon,
 	GitPullRequestIcon,
@@ -274,6 +275,13 @@ export function DashboardTopbar({
 									<UserCircleIcon size={16} strokeWidth={2} />
 									Profile
 									<DropdownMenuShortcut keys={["G", "U"]} />
+								</Link>
+							</DropdownMenuItem>
+							<DropdownMenuItem asChild>
+								<Link to="/repos">
+									<ArchiveIcon size={16} strokeWidth={2} />
+									Repositories
+									<DropdownMenuShortcut keys={["G", "O"]} />
 								</Link>
 							</DropdownMenuItem>
 							<DropdownMenuItem asChild>

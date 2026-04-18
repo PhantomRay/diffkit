@@ -28,15 +28,24 @@ export type GitHubLabel = {
 	description: string | null;
 };
 
+/** Weekly total commit counts; index `0` is oldest week, last index is most recent (GitHub participation API). */
+export type RepoParticipationStats = {
+	weeklyCommits: number[];
+};
+
 export type UserRepoSummary = {
 	id: number;
 	name: string;
 	fullName: string;
 	description: string | null;
 	stars: number;
+	forks: number;
 	language: string | null;
 	updatedAt: string | null;
+	createdAt: string | null;
 	isPrivate: boolean;
+	/** GitHub visibility (`internal` on Enterprise); derived when the API omits `visibility`. */
+	visibility: "public" | "private" | "internal";
 	url: string;
 	owner: string;
 };

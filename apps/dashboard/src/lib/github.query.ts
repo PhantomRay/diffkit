@@ -13,6 +13,7 @@ import {
 	getMyPulls,
 	getNotifications,
 	getOrgTeams,
+	getProfileRepos,
 	getPullComments,
 	getPullFileSummaries,
 	getPullFiles,
@@ -29,6 +30,8 @@ import {
 	getRepoFileContent,
 	getRepoLabels,
 	getRepoOverview,
+	getRepoParticipationStats,
+	getReposHub,
 	getRepoTree,
 	getReviewThreadStatuses,
 	getTimelineEventPage,
@@ -42,6 +45,7 @@ import {
 } from "./github.functions";
 import { githubCachePolicy } from "./github-cache-policy";
 import { ensureDefinedQueryData } from "./query-data";
+import type { ReposHubInput } from "./repos-hub-filter";
 
 type RepoState = "all" | "closed" | "open";
 type PullSort = "created" | "long-running" | "popularity" | "updated";
@@ -126,6 +130,8 @@ export const githubQueryKeys = {
 	repos: {
 		list: (scope: GitHubQueryScope) =>
 			["github", scope.userId, "repos", "list"] as const,
+		hub: (scope: GitHubQueryScope, input: ReposHubInput) =>
+			["github", scope.userId, "repos", "hub", input] as const,
 	},
 	search: {
 		commandPalette: (
@@ -179,6 +185,8 @@ export const githubQueryKeys = {
 	) => ["github", scope.userId, "timelineEventPage", input] as const,
 	profile: (scope: GitHubQueryScope, username: string) =>
 		["github", scope.userId, "profile", username] as const,
+	profileRepos: (scope: GitHubQueryScope, username: string) =>
+		["github", scope.userId, "profileRepos", username] as const,
 	contributions: (scope: GitHubQueryScope, username: string) =>
 		["github", scope.userId, "contributions", username] as const,
 	pinnedRepos: (scope: GitHubQueryScope, username: string) =>
@@ -214,6 +222,10 @@ export const githubQueryKeys = {
 			scope: GitHubQueryScope,
 			input: { owner: string; repo: string },
 		) => ["github", scope.userId, "repo", "contributors", input] as const,
+		participation: (
+			scope: GitHubQueryScope,
+			input: { owner: string; repo: string },
+		) => ["github", scope.userId, "repo", "participation", input] as const,
 		discussions: (
 			scope: GitHubQueryScope,
 			input: { owner: string; repo: string },
@@ -255,6 +267,32 @@ export function githubUserReposQueryOptions(scope: GitHubQueryScope) {
 	return queryOptions({
 		queryKey: githubQueryKeys.repos.list(scope),
 		queryFn: () => getUserRepos(),
+		staleTime: githubCachePolicy.reposList.staleTimeMs,
+		gcTime: githubCachePolicy.reposList.gcTimeMs,
+		meta: persistedMeta,
+	});
+}
+
+export function githubReposHubQueryOptions(
+	scope: GitHubQueryScope,
+	input: ReposHubInput,
+) {
+	return queryOptions({
+		queryKey: githubQueryKeys.repos.hub(scope, input),
+		queryFn: () => getReposHub({ data: input }),
+		staleTime: githubCachePolicy.reposList.staleTimeMs,
+		gcTime: githubCachePolicy.reposList.gcTimeMs,
+		meta: persistedMeta,
+	});
+}
+
+export function githubProfileReposQueryOptions(
+	scope: GitHubQueryScope,
+	username: string,
+) {
+	return queryOptions({
+		queryKey: githubQueryKeys.profileRepos(scope, username),
+		queryFn: () => getProfileRepos({ data: { username } }),
 		staleTime: githubCachePolicy.reposList.staleTimeMs,
 		gcTime: githubCachePolicy.reposList.gcTimeMs,
 		meta: persistedMeta,
@@ -634,6 +672,19 @@ export function githubRepoBranchesQueryOptions(
 		queryFn: () => getRepoBranches({ data: input }),
 		staleTime: githubCachePolicy.repoMeta.staleTimeMs,
 		gcTime: githubCachePolicy.repoMeta.gcTimeMs,
+		meta: persistedMeta,
+	});
+}
+
+export function githubRepoParticipationQueryOptions(
+	scope: GitHubQueryScope,
+	input: { owner: string; repo: string },
+) {
+	return queryOptions({
+		queryKey: githubQueryKeys.repo.participation(scope, input),
+		queryFn: () => getRepoParticipationStats({ data: input }),
+		staleTime: githubCachePolicy.repoParticipation.staleTimeMs,
+		gcTime: githubCachePolicy.repoParticipation.gcTimeMs,
 		meta: persistedMeta,
 	});
 }
