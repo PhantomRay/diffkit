@@ -120,6 +120,30 @@ export default {};`;
 	};
 }
 
+// better-auth statically imports @better-auth/kysely-adapter, which in turn
+// dynamic-imports three dialects (bun-sqlite, node-sqlite, d1-sqlite). On
+// Cloudflare we only use the drizzle adapter — but the bun/node dialect
+// dynamic imports still get bundled. Stub the two we never hit.
+function betterAuthDialectStub(): import("vite").Plugin {
+	// Matches the resolved absolute path of bun/node sqlite dialect files inside
+	// @better-auth/kysely-adapter/dist/. The filenames include build hashes so
+	// we match on the dialect prefix.
+	const UNUSED_DIALECT_RE =
+		/@better-auth[\\/]kysely-adapter[\\/]dist[\\/](bun-sqlite|node-sqlite)-dialect/;
+	const STUB = `export const BunSqliteDialect = null;
+export const NodeSqliteDialect = null;
+export default {};`;
+	return {
+		name: "better-auth-dialect-stub",
+		enforce: "pre",
+		load(id) {
+			if (this.environment?.name === "ssr" && UNUSED_DIALECT_RE.test(id)) {
+				return STUB;
+			}
+		},
+	};
+}
+
 // Remote R2/KV/D1 bindings require `wrangler login`; Vitest and PR CI use local Miniflare only.
 const useCloudflareRemoteBindings =
 	process.env.CI !== "true" && process.env.VITEST !== "true";
@@ -129,6 +153,7 @@ const config = defineConfig(({ command }) => ({
 	plugins: [
 		devtools(),
 		shikiSSRStub(),
+		betterAuthDialectStub(),
 		cloudflare({
 			viteEnvironment: { name: "ssr" },
 			...worktreePersistState,
