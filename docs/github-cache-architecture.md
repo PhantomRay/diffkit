@@ -71,6 +71,17 @@ Each KV entry stores the same envelope shape as the legacy D1 response cache:
 
 Entries default to a 7 day KV TTL.
 
+## Why D1 + KV
+
+The split-cache design uses two storage systems because they solve different problems:
+
+- **D1 (SQLite)**: durable, queryable, and authoritative. Use D1 for control state you need to persist and query (revalidation signals, namespace versions, legacy response rows). D1 supports transactions and indexed queries which makes it the correct place for invalidation logic and any relational lookups.
+- **KV (Cloudflare KV)**: hot, low-latency key/value payloads and short-lived tokens. KV is optimized for edge reads and high throughput but is not suitable for relational queries or authoritative invalidation state. It stores the payload envelopes and short-lived installation tokens with TTLs.
+
+Reads follow the split-cache pattern: the Worker resolves namespace versions from D1 to build a stable KV key, tries KV for the payload, falls back to legacy D1 if missing, and uses conditional GitHub fetches when needed. Namespace bumps change the effective KV key (avoid immediate deletes) so invalidation is durable without delete storms.
+
+See the cache implementation and token helpers in `apps/dashboard/src/lib/github-cache.ts` and `apps/dashboard/src/lib/github.server.ts`.
+
 ## Split Cache Read Flow
 
 The central implementation is:
@@ -327,6 +338,12 @@ If the KV binding is unavailable, the payload cache layer falls back to legacy
 D1 behavior, and installation token reuse is limited to the current Worker
 isolate's memory cache.
 
+Local development notes
+
+- For local dev you do not strictly need a `GITHUB_CACHE_KV` binding — when KV is missing the code falls back to D1/legacy cache behavior. This lets you run the dashboard locally without provisioning KV.
+- You still need to run the D1 migrations locally (the repo provides `pnpm --filter @diffkit/dashboard migrate`). `wrangler` is required for applying D1 migrations.
+- Set up `apps/dashboard/.dev.vars` (see README) and run `pnpm dev` to start the local dev server; server functions run locally under the dev server and perform the Octokit requests and cache logic.
+
 ## Testing Coverage
 
 The focused tests cover:
@@ -374,3 +391,32 @@ Likely next steps:
   and GitHub quota pressure.
 - Add push-based client notifications if live updates are needed without
   reintroducing browser polling.
+
+```mermaid
+flowchart LR
+  Browser["Browser (React Query & persisted cache)"]
+  Worker["Cloudflare Worker (split-cache logic)"]
+  KV["Cloudflare KV (GITHUB_CACHE_KV)"]
+  D1["D1 (Control Plane & Legacy Cache)"]
+  GitHub["GitHub API"]
+
+  Browser -->|Request| Worker
+  Worker -->|1. Read payload| KV
+  Worker -->|2. Fallback read| D1
+  Worker <-->|Resolve signals/namespaces| D1
+
+  Worker <-->|API Calls| GitHub
+
+  Worker -->|Write payload| KV
+  Worker -->|Mirror payload| D1
+  Worker -->|Update signals| D1
+
+  Browser -.->|Prefetch / refetch| Worker
+
+  subgraph Notes
+    N1["Durable invalidation in D1<br/>Namespace bumps change KV keys"]
+    N2["Stale-if-rate-limited serves cached payloads"]
+  end
+  D1 --- N1
+  Worker --- N2
+```
